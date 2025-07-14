@@ -1,0 +1,80 @@
+Libtorch
+A) visual studio를 이용하여 실행하기
+
+1. https://pytorch.org/get-started/locally/    pytorch 공식 홈페이지에서 최신 버전 LibTorch 설치하고 CUDA도 LibTorch 버전과 호환되게 설치 
+2. opencv 대신 단일 헤더 파일인 stb_image.h와 stb_image_write.h를 사용하여 이미지 load와 save 구현 
+   https://github.com/nothings/stb -> 해당 깃헙에서 stb_image.h와 stb_image_write.h 다운로드하여 프로젝트의 헤더 파일에 추가
+   메인 소스코드가 포함되어 있는 디렉터리 
+   C:\Users\MinheeJang\source\repos\portraitVUE-RESTORATION-OpenVINO\portraitVUE-RESTORATION-OpenVINO
+   이런 위치에 다운 받은 헤더 파일 옮겨 놓기
+3. 프로젝트 속성 설정 -> 이것도 역시 Debug mode만 바꿔줘도 됨
+ 1) 구성 속성 -> 일반 -> C++ 언어 표준 -> ISO C++ 17 표준(/std:c++17)
+ 2) 구성 속성 -> 디버깅 -> 환경 PATH=D:\download_edge\libtorch_debug_2.6.0+cu126\lib;D:\download_edge\libtorch-debug-2.7.1+cpu\libtorch\lib;%PATH% 추가
+ 3) C/C++ -> 일반 -> 추가 포함 디렉터리 
+D:\download_edge\libtorch_debug_2.6.0+cu126\include;D:\download_edge\libtorch_debug_2.6.0+cu126\include\torch\csrc\api\include;D:\download_edge\libtorch-debug-2.7.1+cpu\libtorch\include;D:\download_edge\libtorch-debug-2.7.1+cpu\libtorch\include\torch\csrc\api\include 추가
+ 4) 링커 -> 일반 -> 추가 라이브러리 디렉터리 
+D:\download_edge\libtorch_debug_2.6.0+cu126\lib;D:\download_edge\libtorch-debug-2.7.1+cpu\libtorch\lib 추가
+ 5) 링커 -> 입력 -> 추가 종속성 c10.lib;c10_cuda.lib;torch.lib;torch_cpu.lib;torch_cuda.lib;-INCLUDE:?warp_size@cuda@at@@YAHXZ;%(AdditionalDependencies) 추가
+ 
+4. 저 위의 디렉터리에 input.png도 추가하기 -> 모델 inference에 사용될 input image
+
+** 만약 release 모드로도 실행하고 싶다면 해당 위치들에서 debug->release로 바꿔줘서 프로젝트 구성을 release로 설정하고 전체 과정을 반복해주면 된다. **
+
+B)visual studio의 debug나 release모드로 exe 파일 생성 후 cli로 실행
+
+프로젝트 디렉터리 -> x64 -> debug or release -> 안에 있는 exe파일       // 해당 경로에 있는 exe 파일 실행 
+debug의 경우에는 D:\download_edge\libtorch_debug_2.6.0+cu126\lib와 D:\download_edge\libtorch-debug-2.7.1+cpu\libtorch\lib에 있는 dll 파일들 exe파일 있는 위치에 옮겨놓아야 함
+release의 경우에는 D:\download_edge\libtorch_release_2.6.0+cu126\lib와 D:\download_edge\libtorch-release-2.7.1+cpu\libtorch\lib에 있는 dll 파일들 exe파일 있는 위치에 옮겨놓아야 함
+저 dll파일들 옮겨 놓는거는 프로젝트속성 -> 디버그에 환경변수로 설정해둔 경로에 존재함
+
+C:\Users\MinheeJang\source\repos\PR-LibTorch\x64\Release\Test_LibTorch.exe 
+--input "D:/obj_data/portraitVue-Restoration-code/input.jpg" 
+--model "D:/obj_data/portraitVue-Restoration-code/(lr = 1e-4, batch = 4)/all_24000_newcomposite.pt" 
+--device "CPU"
+
+C:\Users\MinheeJang\source\repos\PR-LibTorch\x64\Release\Test_LibTorch.exe 
+--input "D:/obj_data/portraitVue-Restoration-code/input.jpg" 
+--model "D:/obj_data/portraitVue-Restoration-code/(lr = 1e-4, batch = 4)/all_24000_newcomposite.pt" 
+--device "GPU"
+
+
+OpenVINO
+A) visual studio를 이용하여 실행하기
+
+1. openvino_toolkit_windows_2025.0.0.17942.1f68be9f594_x86_64 OpenVINO의 toolkit 다운로드 (버전은 크게 상관 없을듯) 사용한 버전은 2025.0.0, 가장 최신은 2025.1.0
+2. opencv 대신 단일 헤더 파일인 stb_image.h와 stb_image_write.h를 사용하여 이미지 load와 save 구현 
+   https://github.com/nothings/stb -> 해당 깃헙에서 stb_image.h와 stb_image_write.h 다운로드하여 프로젝트의 헤더 파일에 추가
+   메인 소스코드가 포함되어 있는 디렉터리 
+   C:\Users\MinheeJang\source\repos\portraitVUE-RESTORATION-OpenVINO\portraitVUE-RESTORATION-OpenVINO
+   이런 위치에 다운 받은 헤더 파일 옮겨 놓기
+
+3. 프로젝트 속성 설정 -> Debug mode만 바꿔줘도 됨
+ 1) 구성 속성 C++ 언어 표준 -> ISO C++ 17 표준(/std:c++17)
+ 2) 구성 속성 -> 디버깅 -> 환경 PATH=C:\Program Files (x86)\Intel\openvino_2025.0\runtime\bin\intel64\Debug;C:\Program Files (x86)\Intel\openvino_2025.0\runtime\3rdparty\tbb\bin;%PATH% 추가(Release 모드는 Debug-> Release로만 바꿔주면 됨
+ 3) C/C++ -> 일반 -> 추가 포함 디렉터리  C:\Program Files (x86)\Intel\openvino_2025.0\runtime\include  추가
+ 4) 링커 -> 일반 -> 추가 라이브러리 디렉터리 C:\Program Files (x86)\Intel\openvino_2025.0\runtime\lib\intel64\Debug(Release 모드는 'Release'로 바꿔서) 추가
+ 5) 링커 -> 입력 -> 추가 종속성 openvino_cd.lib;openvino_onnx_frontendd.lib;openvino_paddle_frontendd.lib;openvino_pytorch_frontendd.lib;openvino_tensorflow_frontendd.lib;openvino_tensorflow_lite_frontendd.lib;openvinod.lib 추가
+Release 모드는 확장자 앞에 있는 d들 하나씩 지우기
+4. 저 위의 디렉터리에 input.png도 추가하기 -> 모델 inference에 사용될 input image
+
+B) visual studio의 debug나 release모드로 exe 파일 생성 후 cli로 실행
+프로젝트 디렉터리 -> x64 -> debug or release -> 안에 있는 exe파일       // 해당 경로에 있는 exe 파일 실행 
+debug의 경우에는 C:\Program Files (x86)\Intel\openvino_2025.0\runtime\3rdparty\tbb\bin 와 C:\Program Files (x86)\Intel\openvino_2025.0\runtime\bin\intel64\Debug에 있는 dll 파일들 exe파일 있는 위치에 옮겨놓아야 함
+release의 경우에는 C:\Program Files (x86)\Intel\openvino_2025.0\runtime\3rdparty\tbb\bin 와 C:\Program Files (x86)\Intel\openvino_2025.0\runtime\bin\intel64\Release에 있는 dll 파일들 exe파일 있는 위치에 옮겨놓아야 함
+exe 실행할때는 exe경로 --bin ~~.bin경로 --xml ~~.xml경로 --input input이미지경로 --output output이미지 저장할 경로 --device CPU,GPU등등 실행할 device 종류
+이렇게 하면 됨
+
+C:\Users\MinheeJang\source\repos\portraitVUE-RESTORATION-OpenVINO\x64\Debug\portraitVUE-RESTORATION-OpenVINO.exe 
+--bin "C:\Users\MinheeJang\source\repos\portraitVUE-RESTORATION-OpenVINO\portraitVUE-RESTORATION-OpenVINO\netG.bin" 
+--xml "C:\Users\MinheeJang\source\repos\portraitVUE-RESTORATION-OpenVINO\portraitVUE-RESTORATION-OpenVINO\netG.xml" 
+--input "C:\Users\MinheeJang\source\repos\portraitVUE-RESTORATION-OpenVINO\portraitVUE-RESTORATION-OpenVINO\input.png" 
+--output "C:\Users\MinheeJang\source\repos\portraitVUE-RESTORATION-OpenVINO\portraitVUE-RESTORATION-OpenVINO\output_cli.png" 
+--device "CPU"
+
+C:\Users\MinheeJang\source\repos\portraitVUE-RESTORATION-OpenVINO\x64\Release\portraitVUE-RESTORATION-OpenVINO.exe 
+--bin "C:\Users\MinheeJang\source\repos\portraitVUE-RESTORATION-OpenVINO\portraitVUE-RESTORATION-OpenVINO\netG.bin" 
+--xml "C:\Users\MinheeJang\source\repos\portraitVUE-RESTORATION-OpenVINO\portraitVUE-RESTORATION-OpenVINO\netG.xml" 
+--input "C:\Users\MinheeJang\source\repos\portraitVUE-RESTORATION-OpenVINO\portraitVUE-RESTORATION-OpenVINO\input.png" 
+--output "C:\Users\MinheeJang\source\repos\portraitVUE-RESTORATION-OpenVINO\portraitVUE-RESTORATION-OpenVINO\output_cli.png" 
+--device "CPU"
+

@@ -1,0 +1,2 @@
+https://github.com/pytorch/pytorch.github.io/blob/site/published_versions.json
+여기서 ctrl + f로 원하는 버전 찾고 복붙해서 설치하기
