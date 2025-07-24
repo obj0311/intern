@@ -1,0 +1,78 @@
+# This is a basic workflow to help you get started with Actions
+
+name: ASAN Check Run
+
+# Controls when the workflow will run
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:  
+    inputs:
+        ASAN_Build_Check:
+            description: "ASAN_BUILD_CHECK"
+            required: true
+            default: true
+            
+        VS_Version:
+            description: "Visual Studio Version"
+            required: true
+            default: '2022'
+
+env:
+  WORKSPACE : ${{ GITHUB.WORKSPACE }}
+  BRANCH_NAME_TEMP : ${{ GITHUB.BASE_REF }}
+  BUILD_NUMBER : ${{ GITHUB.RUN_NUMBER }}
+  CommonMD_UTIL_ROOT_DIR : ${{ secrets.CommonMD_UTIL_ROOT_DIR }}
+  UNIT_TEST_RESULT_ROOT_DIR : ${{ secrets.UNIT_TEST_RESULT_ROOT_DIR }}
+  ARTI_DOWNLOAD_ROOT_DIR : ${{ secrets.ARTI_DOWNLOAD_ROOT_DIR }}
+  VS_ROOT_PATH : ${{ secrets.VS2022_ROOT_PATH }}
+  VSTEST_CONSOLE_FILE_PATH: ${{ secrets.VS2022_VSTEST_CONSOLE_FILE_PATH }}
+  CODE_COVERAGE_FILE_PATH : ${{ secrets.VS2022_CODE_COVERAGE_FILE_PATH }}
+  ONEAPI_IPP_DLL_PATH: ${{ secrets.ONEAPI_IPP_DLL_PATH }}
+  ONEAPI_MKL_DLL_PATH: ${{ secrets.ONEAPI_MKL_DLL_PATH }}
+  REF_NAME : ${{ GITHUB.REF_NAME }}
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: [ 237server_unit_pr ]
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+
+      # Runs a set of commands using the runners shell
+      - name: Run a UnitTest script
+        shell: cmd
+        run: |        
+            set DATE_T=%date%
+            for /f "tokens=2 delims=/" %%a in ("${{GITHUB.REPOSITORY}}") do (set GIT_REPO=%%a)
+            set UNIT_TEST_RESULT_ROOT_DIR_TEMP=%UNIT_TEST_RESULT_ROOT_DIR%
+            
+            echo DATE_T \ GIT_REPO \ NUMBER = %date% \ %GIT_REPO% \ %BUILD_NUMBER% 
+            
+            if /i "%BRANCH_NAME_TEMP%" == "" (
+                set BRANCH_NAME=%REF_NAME%
+            ) else (
+                set BRANCH_NAME=%BRANCH_NAME_TEMP%
+            )
+            
+            echo TARGET_BRANCH_NAME = %BRANCH_NAME%
+            
+            echo ====================================================================
+            %CommonMD_UTIL_ROOT_DIR%\Utils\PyArti\PyArti.exe download HME-US-UnitTest/Tool/TestBatch/230831/Test_Start.bat %WORKSPACE%
+            echo ====================================================================
+            call %WORKSPACE%\ASAN_Config.bat
+            set ALLOC_DEALLOC_MISMATCH=0
+            set ASAN_BUILD=${{inputs.ASAN_Build_Check}}
+            set VS_VER=${{ inputs.VS_Version }}
+            
+            call %WORKSPACE%\Test_Start.bat %GIT_REPO% %WORKSPACE%
+            echo ====================================================================
+            set ALLOC_DEALLOC_MISMATCH=1
+            call %WORKSPACE%\Test_Start.bat %GIT_REPO% %WORKSPACE%
+            del /q %WORKSPACE%\Test_Start.bat
+  
+            

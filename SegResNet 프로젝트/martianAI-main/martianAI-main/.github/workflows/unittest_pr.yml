@@ -1,0 +1,88 @@
+# This is a basic workflow to help you get started with Actions
+
+name: PR UnitTest Run
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on pull request events but only for the master branch
+  pull_request:
+    branches:      
+      - 'main'
+      
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:  
+
+env:
+  WORKSPACE : ${{ GITHUB.WORKSPACE }}
+  BRANCH_NAME : ${{ GITHUB.BASE_REF }}
+  BUILD_NUMBER : ${{ GITHUB.RUN_NUMBER }}
+  CommonMD_UTIL_ROOT_DIR : ${{ secrets.CommonMD_UTIL_ROOT_DIR }}
+  UNIT_TEST_RESULT_ROOT_DIR : ${{ secrets.UNIT_TEST_RESULT_ROOT_DIR }}
+  ARTI_DOWNLOAD_ROOT_DIR : ${{ secrets.ARTI_DOWNLOAD_ROOT_DIR }}
+  VS_ROOT_PATH : ${{ secrets.VS2022_ROOT_PATH }}
+  VSTEST_CONSOLE_FILE_PATH: ${{ secrets.VS2022_VSTEST_CONSOLE_FILE_PATH }}
+  CODE_COVERAGE_FILE_PATH : ${{ secrets.VS2022_CODE_COVERAGE_FILE_PATH }}
+  GIT_TOKEN : ${{ secrets.UNIT_GIT_TOKEN }}
+  ONEAPI_IPP_DLL_PATH: ${{ secrets.ONEAPI_IPP_DLL_PATH }}
+  ONEAPI_MKL_DLL_PATH: ${{ secrets.ONEAPI_MKL_DLL_PATH }}
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: [ 237server_unit_pr ]
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+
+      # Runs a set of commands using the runners shell
+      - name: Run a UnitTest script
+        shell: cmd
+        run: |        
+            set DATE_T=%date%
+            for /f "tokens=2 delims=/" %%a in ("${{GITHUB.REPOSITORY}}") do (set GIT_REPO=%%a)
+            set UNIT_TEST_RESULT_ROOT_DIR_TEMP=%UNIT_TEST_RESULT_ROOT_DIR%
+            
+            rem echo WORKSPACE=%WORKSPACE%
+            echo DATE_T \ GIT_REPO \ NUMBER = %date% \ %GIT_REPO% \ %BUILD_NUMBER% 
+            echo TARGET_BRANCH_NAME = %BRANCH_NAME%
+            
+            echo +====================================================================+
+            rem curl -H "Authorization: token %GIT_TOKEN%" -O "https://raw.github.sec.samsung.net/HME-US/test-meta/main/Test_Start.bat"
+            %CommonMD_UTIL_ROOT_DIR%\Utils\PyArti\PyArti.exe download HME-US-UnitTest/Tool/TestBatch/230831/Test_Start.bat %WORKSPACE%
+            echo +====================================================================+
+            call %WORKSPACE%\UnitTest_Config.bat
+            call %WORKSPACE%\Test_Start.bat %GIT_REPO% %WORKSPACE%
+            del /q %WORKSPACE%\Test_Start.bat
+     
+      - name: upload artifacts (coverage_results)
+        uses: CODE-Actions/upload-artifact@v2
+        with:
+          name: xmlcov
+          path: xmlcov
+          if-no-files-found: error
+          
+      - name: upload artifacts (test_results)
+        uses: CODE-Actions/upload-artifact@v2
+        with:
+          name: test_results
+          path: test_results
+          if-no-files-found: error
+
+  testhub:
+    runs-on: [ code-linux, code-default ]
+    needs: build
+    steps:
+      - name: send to testhub
+        uses: CODE-Actions/testhub@v1
+        with:
+          test-tool: vstest
+          test-artifact-name: test_results
+          coverage-tool: vstest.console
+          coverage-artifact-name: xmlcov
+          sub-project: $(cut -d'/' -f2 <<< "$GITHUB_REPOSITORY")_${{GITHUB.BASE_REF}}
+
+            

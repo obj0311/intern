@@ -1,0 +1,73 @@
+# .gitignore 샘플 예시
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+*.pdb
+*.suo
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+*.exp
+
+# build
+build/
+Debug/
+Release/
+Mix/
+.vs/
+enc_temp_folder/
+
+*.bmp
+*.jpg
+*.png
+*.gz
+*.bin
+*.pt
+*.pth
+*.mi
+MartianDebuging.txt
+MartianInferenceInfo.txt
+
+*.opensdf
+*.sdf
+*.ipch
+*.suo
+*.exp
+*.ilk
+*.iobj
+*.ipdb
+*.aps
+*.user
+*.tlog
+*.log
+*.res
+*.idb
+*.pch
+*.lastbuildstate

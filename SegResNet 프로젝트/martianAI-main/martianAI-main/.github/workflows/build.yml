@@ -1,0 +1,158 @@
+name: build
+
+on:
+    workflow_dispatch:
+
+env:  
+  JFROG_TOKEN : ${{ secrets.JFROG_TOKEN }}
+  GIT_TOKEN : ${{ secrets.GIT_TOKEN }}
+  _PREFIX : http://10.50.11.166:8082/artifactory
+  
+jobs:
+  source:    
+     name: Source Download
+     runs-on: [ h25 ]
+     outputs:
+      output1: ${{ steps.src_download.outputs.WORKSPACE }}
+      output2: ${{ steps.src_download.outputs.TRIGGER_INFO_FILE_PATH }}
+      output5: ${{ steps.src_download.outputs.PROJECT_NAME }}
+     steps:          
+       - name: Source_Download Build-meta    
+         shell: cmd
+         id: src_download                
+         run: |
+              echo "Part : Source.bat"
+              
+              set BUILD_META=build-meta
+              set PRJ_CLASS=collabobin
+              set GITHUB_URL=github.sec.samsung.net
+              set GITHUB_ORG=HME-US
+              set date=%date:-=%
+              set BUILD_DATE=%date:~2,6%
+              set BUILD_NUMBER=${{GITHUB.RUN_NUMBER}}
+              set REF_BUILD_NUMBER=000%BUILD_NUMBER%
+              set REF_BUILD_NUMBER=%REF_BUILD_NUMBER:~-4%
+              
+              set REF_SRC_ROOT=E:/ref_root/src
+              
+              rem build-meta: git_repo / workspace: project_name
+              for /f "tokens=2 delims=/" %%a in ("${{GITHUB.REPOSITORY}}") do (set GIT_REPO=%%a)
+              set PROJECT_NAME=%GIT_REPO%
+              for /f "tokens=3 delims=/" %%a in ("${{GITHUB.REF}}") do (set PROJECT_BRANCH=%%a)        
+              set WORKSPACE=%REF_SRC_ROOT%/%PRJ_CLASS%/%PROJECT_NAME%_%BUILD_DATE%_%REF_BUILD_NUMBER%
+              
+              echo ::set-output name=WORKSPACE::%WORKSPACE:/=\%
+              echo ::set-output name=PROJECT_NAME::%PROJECT_NAME:/=\%
+              
+              git clone git@%GITHUB_URL%:%GITHUB_ORG%/%GIT_REPO%.git %WORKSPACE% -b %PROJECT_BRANCH%
+              set WORKSPACE_DIR=%WORKSPACE:~,1%
+              %WORKSPACE_DIR%:
+              cd %WORKSPACE%
+              git clone git@%GITHUB_URL%:%GITHUB_ORG%/%BUILD_META%.git %BUILD_META%
+              cd %BUILD_META%
+              echo %CD%
+              echo call %WORKSPACE:/=\%\%BUILD_META: =%\%PRJ_CLASS: =%\%GIT_REPO: =%\source.bat ${{GITHUB.EVENT_NAME}}
+              call %WORKSPACE:/=\%\%BUILD_META: =%\%PRJ_CLASS: =%\%GIT_REPO: =%\source.bat ${{GITHUB.EVENT_NAME}}
+              
+              echo ::set-output name=TRIGGER_INFO_FILE_PATH::%TRIGGER_INFO_FILE_PATH%
+              
+              echo "complete source.bat"
+          
+  trigger:
+     name: Copy source and Set up Config
+     runs-on: [ h25 ]
+     needs: [source]
+     strategy:
+      matrix:
+        build_config: ['RELEASE_X64']
+     outputs:
+       output3: ${{ steps.run_trigger.outputs.WORKSPACE }}
+     steps:
+      - name: Run Trigger Job
+        shell: cmd
+        id: run_trigger
+        run: |          
+          echo "Trigger Start!!"
+          echo ${{ needs.source.outputs.output1 }}
+          echo ${{ needs.source.outputs.output2 }}
+          echo ${{ matrix.build_config }}
+          set WORKSPACE=${{needs.source.outputs.output1}}
+          for /f "tokens=*" %%s in (${{ needs.source.outputs.output2 }}${{matrix.build_config}}.env) do ( set %%s )
+          set WORKSPACE_DIR=%WORKSPACE:~,1%
+          %WORKSPACE_DIR%:
+                    
+          call %WORKSPACE%\%BUILD_META: =%\%PRJ_CLASS: =%\%GIT_REPO: =%\trigger.bat ${{GITHUB.EVENT_NAME}} ${{matrix.build_config}} ${{ needs.source.outputs.output2 }}${{matrix.build_config}}.env
+          
+          echo ::set-output name=WORKSPACE::%WORKSPACE:/=\%
+          
+  build:
+     name: Build module
+     runs-on: [ h25 ]
+     needs: [source, trigger]
+     strategy:      
+      matrix:
+        build_config: ['Release_x64']
+        build_package: ['${{ needs.source.outputs.output5 }}']
+     steps:
+      - name: Run Build Job
+        shell: cmd
+        id: run_build
+        run: |
+          echo "Build Start!!"          
+          echo ${{ needs.trigger.outputs.output3 }}
+          
+          echo ${{ matrix.build_config }}
+          echo ${{ matrix.build_package }}
+          
+          set WORKSPACE=${{needs.trigger.outputs.output3}}
+          set WORKSPACE=%WORKSPACE: =%
+          
+          echo %WORKSPACE%
+          
+          for /f "tokens=*" %%s in (%WORKSPACE%\trigger_info_file_${{matrix.build_package}}.env) do ( set %%s )
+          
+          set WORKSPACE_DIR=%WORKSPACE:~,1%
+          %WORKSPACE_DIR%:
+          cd %WORKSPACE%
+          echo %WORKSPACE%\%BUILD_META: =%\%GIT_REPO: =%\
+          call %WORKSPACE%\%BUILD_META: =%\%PRJ_CLASS: =%\%GIT_REPO: =%\build.bat ${{matrix.build_config}} %WORKSPACE%\trigger_info_file_${{matrix.build_package}}.env
+          
+  post:
+     name: Archive build binary
+     runs-on: [ h25 ]
+     needs: [trigger, build]
+     outputs:
+       output4: ${{ steps.archive_build.outputs.WORKSPACE }}
+     steps:
+      - name: Run Post Job
+        shell: cmd
+        id: archive_build
+        run: |
+          echo "Part : post.bat"
+          set WORKSPACE=${{ needs.trigger.outputs.output3 }}
+          set WORKSPACE=%WORKSPACE: =%
+          echo ::set-output name=WORKSPACE::%WORKSPACE%
+          for /f "tokens=*" %%s in (%WORKSPACE%\trigger_info_file_post.env) do ( set %%s)
+          set WORKSPACE_DIR=%WORKSPACE:~,1%
+          %WORKSPACE_DIR%:
+          cd %WORKSPACE%
+          
+          call %BUILD_META%\%PRJ_CLASS%\%GIT_REPO%\post.bat %WORKSPACE% %WORKSPACE%\trigger_info_file_post.env || (exit 0)
+          
+  delete:
+     name: build_path delete
+     runs-on: [ h25 ]
+     needs: [trigger, post]
+     steps:     
+      - name: delete
+        id: delete
+        shell: cmd                           
+        run: |
+          echo "delete Start!!"          
+          echo ${{ needs.post.outputs.output4 }}
+        
+          set WORKSPACE=${{ needs.post.outputs.output4 }}
+          set WORKSPACE=%WORKSPACE: =%
+          echo %WORKSPACE%
+          
+          rmdir /s /q %WORKSPACE%

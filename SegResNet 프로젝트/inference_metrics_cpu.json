@@ -1,0 +1,7 @@
+{
+    "pytorch": {
+        "preprocess_time_sec_cpu": 0.0045108795166015625,
+        "inference_time_sec_cpu": 2.6849663257598877,
+        "postprocess_time_sec_cpu": 0.5526168346405029
+    }
+}

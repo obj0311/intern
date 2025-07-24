@@ -1,0 +1,7 @@
+{
+    "openvino": {
+        "preprocess_time_sec": 0.005000114440917969,
+        "inference_time_sec": 1.7372162342071533,
+        "postprocess_time_sec": 0.6217098236083984
+    }
+}
